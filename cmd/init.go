@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/freddierice/lht/project"
@@ -30,7 +31,15 @@ architectures, configurations, etc.`,
 
 		proj.Arch, _ = cmd.Flags().GetString("arch")
 		proj.CrossCompilePrefix, _ = cmd.Flags().GetString("cross-compile-prefix")
-		proj.Defconfig, _ = cmd.Flags().GetString("defconfig")
+		defconfigFile, _ := cmd.Flags().GetString("defconfig")
+		if defconfigFile != "" {
+			buf, err := ioutil.ReadFile(defconfigFile)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "could not read defconfig file %v\n", err)
+				os.Exit(1)
+			}
+			proj.Defconfig = string(buf)
+		}
 
 		if err := proj.Write(); err != nil {
 			fmt.Fprintf(os.Stderr, "could not write out project configuration: %v\n", err)
