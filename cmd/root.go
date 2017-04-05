@@ -33,30 +33,31 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.SetDefault("RootDirectory", "$HOME/.lht")
-	viper.SetConfigName("lht")        // name of config file (without extension)
-	viper.AddConfigPath("$HOME/.lht") // adding home directory as first search path
-	viper.AddConfigPath("$HOME")      // adding home directory as first search path
-	viper.AutomaticEnv()              // read in environment variables that match
+
+	// get user and home directory for defaults
+	usr, err := user.Current()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "could not get current user: %v\n", err)
+		os.Exit(1)
+	}
+	if usr.HomeDir == "" {
+		fmt.Fprintf(os.Stderr, "user has no home directory\n")
+		os.Exit(1)
+	}
+	rootDirectory := filepath.Join(usr.HomeDir, ".lht")
+	if err := os.MkdirAll(rootDirectory, 0755); err != nil {
+		fmt.Fprintf(os.Stderr, "could not create root directory: %v\n", err)
+		os.Exit(1)
+	}
+
+	viper.Set("RootDirectory", rootDirectory)
+	viper.SetConfigName(".lht")      // name of config file (without extension)
+	viper.AddConfigPath(usr.HomeDir) // adding home directory as first search path
 
 	// If a config file is not found, create one
 	if err := viper.ReadInConfig(); err != nil {
 		// create a new one
-		usr, err := user.Current()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not get current user: %v\n", err)
-			os.Exit(1)
-		}
-		if usr.HomeDir == "" {
-			fmt.Fprintf(os.Stderr, "user has no home directory\n")
-			os.Exit(1)
-		}
-		rootDirectory := filepath.Join(usr.HomeDir, ".lht")
-		if err := os.MkdirAll(rootDirectory, 0755); err != nil {
-			fmt.Fprintf(os.Stderr, "could not create root directory: %v\n", err)
-			os.Exit(1)
-		}
-		confFile, err := os.Create(filepath.Join(rootDirectory, "lht.yaml"))
+		confFile, err := os.Create(filepath.Join(usr.HomeDir, ".lht.yaml"))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "could not create root configuration file (%v): %v\n", confFile, err)
 			os.Exit(1)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/freddierice/lht/project"
 	"github.com/spf13/cobra"
 )
 
@@ -19,12 +20,21 @@ architectures, configurations, etc.`,
 			os.Exit(1)
 		}
 		projectName := args[0]
-		defconfigName, _ := cmd.Flags().GetString("defconfig")
 
-		if cmd.Flags().Changed("defconfig") {
-			fmt.Printf("creating project %v with defconfig %v\n", projectName, defconfigName)
-		} else {
-			fmt.Printf("creating project %v\n", projectName)
+		fmt.Printf("creating project %v\n", projectName)
+		proj, err := project.Create(projectName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not create project: %v\n", err)
+			os.Exit(1)
+		}
+
+		proj.Arch, _ = cmd.Flags().GetString("arch")
+		proj.CrossCompilePrefix, _ = cmd.Flags().GetString("cross-compile-prefix")
+		proj.Defconfig, _ = cmd.Flags().GetString("defconfig")
+
+		if err := proj.Write(); err != nil {
+			fmt.Fprintf(os.Stderr, "could not write out project configuration: %v\n", err)
+			os.Exit(1)
 		}
 	},
 }
