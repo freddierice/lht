@@ -52,7 +52,7 @@ architectures, configurations, etc.`,
 }
 
 func init() {
-	initCmd.Flags().StringP("arch", "a", "x86_64", "Architecture for which to build linux")
+	initCmd.Flags().StringP("arch", "a", "", "Architecture for which to build linux")
 	initCmd.Flags().StringP("target", "t", "x86_64-pc-linux-gnu", "A prefix for compiling to non-host archtectures")
 	initCmd.Flags().StringP("host", "H", "x86_64-pc-linux-gnu", "A prefix to define host architecture")
 	initCmd.Flags().StringP("defconfig", "d", "", "Defconfig file for configuring the kernel")
