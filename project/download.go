@@ -13,6 +13,7 @@ import (
 )
 
 var linuxRegex *regexp.Regexp = regexp.MustCompile("^[0-9]*\\.[0-9]*\\.[0-9]*$")
+var glibcRegex *regexp.Regexp = regexp.MustCompile("^[0-9]*\\.[0-9]*$")
 var majorRegex *regexp.Regexp = regexp.MustCompile("^[0-9]*")
 
 func DownloadVulnKo() (string, error) {
@@ -32,6 +33,43 @@ func DownloadVulnKo() (string, error) {
 	}
 
 	return vulnKoSrc, nil
+}
+
+// DownloadGlibc will check the version and attempt to download a tarball of
+// glibc's source code.
+func DownloadGlibc(version string) (string, error) {
+	downloadDirectory, err := getDownloadDirectory()
+	if err != nil {
+		return "", err
+	}
+	if !glibcRegex.MatchString(version) {
+		return "", fmt.Errorf("glibc version (%v) is invalid", version)
+	}
+	glibcFilename := filepath.Join(downloadDirectory, "glibc-"+version+".tar.gz")
+	if exists(glibcFilename) {
+		return glibcFilename, nil
+	}
+	glibcFile, err := os.Create(glibcFilename)
+	if err != nil {
+		return "", err
+	}
+
+	glibcUrl := fmt.Sprintf("https://ftp.gnu.org/gnu/glibc/glibc-%v.tar.gz", version)
+	resp, err := http.Get(glibcUrl)
+	if err != nil {
+		glibcFile.Close()
+		os.Remove(glibcFilename)
+		return "", err
+	}
+
+	if _, err := io.Copy(glibcFile, resp.Body); err != nil {
+		glibcFile.Close()
+		os.Remove(glibcFilename)
+		return "", err
+	}
+
+	glibcFile.Close()
+	return glibcFilename, nil
 }
 
 // Download a version of linux, and returns the filepath

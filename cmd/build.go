@@ -36,6 +36,11 @@ var buildCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "could not build vuln-ko: %v\n", err)
 			os.Exit(1)
 		}
+
+		if err := proj.BuildGlibc(linuxVersion); err != nil {
+			fmt.Fprintf(os.Stderr, "could not build glibc: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 

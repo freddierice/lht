@@ -30,7 +30,10 @@ architectures, configurations, etc.`,
 		}
 
 		proj.Arch, _ = cmd.Flags().GetString("arch")
-		proj.CrossCompilePrefix, _ = cmd.Flags().GetString("cross-compile-prefix")
+		proj.Target, _ = cmd.Flags().GetString("target")
+		proj.Host, _ = cmd.Flags().GetString("host")
+		proj.GlibcVersion, _ = cmd.Flags().GetString("glibc-version")
+		proj.BusyBoxVersion, _ = cmd.Flags().GetString("busybox-version")
 		defconfigFile, _ := cmd.Flags().GetString("defconfig")
 		if defconfigFile != "" {
 			buf, err := ioutil.ReadFile(defconfigFile)
@@ -50,7 +53,10 @@ architectures, configurations, etc.`,
 
 func init() {
 	initCmd.Flags().StringP("arch", "a", "x86_64", "Architecture for which to build linux")
-	initCmd.Flags().StringP("cross-compile-prefix", "c", "", "A prefix for compiling to non-host archtectures")
+	initCmd.Flags().StringP("target", "t", "x86_64-pc-linux-gnu", "A prefix for compiling to non-host archtectures")
+	initCmd.Flags().StringP("host", "H", "x86_64-pc-linux-gnu", "A prefix to define host architecture")
 	initCmd.Flags().StringP("defconfig", "d", "", "Defconfig file for configuring the kernel")
+	initCmd.Flags().String("glibc-version", "2.25", "Glibc version to use")
+	initCmd.Flags().String("busybox-version", "1.26.2", "Busybox version to use")
 	RootCmd.AddCommand(initCmd)
 }
