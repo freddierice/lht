@@ -34,6 +34,12 @@ architectures, configurations, etc.`,
 		proj.Host, _ = cmd.Flags().GetString("host")
 		proj.GlibcVersion, _ = cmd.Flags().GetString("glibc-version")
 		proj.BusyBoxVersion, _ = cmd.Flags().GetString("busybox-version")
+		proj.FsSize, err = cmd.Flags().GetUint64("fs-size")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "invalid fsSize: %v\n", err)
+			os.Exit(1)
+		}
+
 		defconfigFile, _ := cmd.Flags().GetString("defconfig")
 		if defconfigFile != "" {
 			buf, err := ioutil.ReadFile(defconfigFile)
@@ -58,5 +64,6 @@ func init() {
 	initCmd.Flags().StringP("defconfig", "d", "", "Defconfig file for configuring the kernel")
 	initCmd.Flags().String("glibc-version", "2.25", "Glibc version to use")
 	initCmd.Flags().String("busybox-version", "1.26.2", "Busybox version to use")
+	initCmd.Flags().StringP("fs-size", "s", "549755813888", "Size of the root filesystem (defaults to 512 megabytes)")
 	RootCmd.AddCommand(initCmd)
 }

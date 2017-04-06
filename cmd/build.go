@@ -27,23 +27,8 @@ var buildCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := proj.BuildLinux(linuxVersion); err != nil {
-			fmt.Fprintf(os.Stderr, "could not build linux: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := proj.BuildVulnKo(linuxVersion); err != nil {
-			fmt.Fprintf(os.Stderr, "could not build vuln-ko: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := proj.BuildGlibc(linuxVersion); err != nil {
-			fmt.Fprintf(os.Stderr, "could not build glibc: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := proj.BuildBusyBox(linuxVersion); err != nil {
-			fmt.Fprintf(os.Stderr, "could not build busybox: %v\n", err)
+		if err := proj.BuildAll(linuxVersion); err != nil {
+			fmt.Fprintf(os.Stderr, "could not build all.\n %v\n", err)
 			os.Exit(1)
 		}
 	},
