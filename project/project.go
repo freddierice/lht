@@ -86,6 +86,55 @@ func (proj Project) BuildVulnKo(version string) error {
 	return execAt(vulnDirNew, "make")
 }
 
+func (proj Project) BuildBusyBox(version string) error {
+	proj.BuildSetenv()
+	fmt.Println("downloading busybox")
+	filename, err := DownloadBusyBox(proj.BusyBoxVersion)
+	if err != nil {
+		return err
+	}
+
+	versionPath := filepath.Join(proj.Path(), version)
+	if err := os.MkdirAll(versionPath, 0755); err != nil {
+		return err
+	}
+
+	busyBoxPath := filepath.Join(versionPath, "busybox")
+	busyBoxPathOld := filepath.Join(versionPath, "busybox-"+proj.BusyBoxVersion)
+	busyBoxInstallPath := filepath.Join(busyBoxPath, "_install")
+	if exists(busyBoxInstallPath) {
+		return nil
+	}
+	if !exists(busyBoxPath) {
+		fmt.Println("extracting busybox")
+		//TODO: replace with in-code solution
+		cmd := exec.Command("tar", "-C", versionPath, "-xf", filename)
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+		if err := os.Rename(busyBoxPathOld, busyBoxPath); err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("making busybox defconfig")
+	if err := execAt(busyBoxPath, "make", "defconfig"); err != nil {
+		return err
+	}
+
+	fmt.Println("making busybox")
+	if err := execAt(busyBoxPath, "make", "-j", viper.GetString("Threads")); err != nil {
+		return err
+	}
+
+	fmt.Println("installing busybox")
+	if err := execAt(busyBoxPath, "make", "install"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (proj Project) BuildGlibc(version string) error {
 	proj.BuildSetenv()
 	fmt.Println("downloading glibc")

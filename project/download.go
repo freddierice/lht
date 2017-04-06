@@ -114,6 +114,39 @@ func DownloadLinux(version string) (string, error) {
 	return linuxFilename, nil
 }
 
+// DownloadBuysBox downloads BusyBox with version and returns its filepath
+func DownloadBusyBox(version string) (string, error) {
+	// TODO: check version
+
+	downloadDirectory, err := getDownloadDirectory()
+	if err != nil {
+		return "", err
+	}
+
+	busyBoxFilename := filepath.Join(downloadDirectory, fmt.Sprintf("busybox-%v.tar.bz2", version))
+	busyBoxUrl := fmt.Sprintf("https://busybox.net/downloads/busybox-%v.tar.bz2", version)
+
+	busyBoxFile, err := os.Create(busyBoxFilename)
+	if err != nil {
+		return busyBoxFilename, err
+	}
+
+	resp, err := http.Get(busyBoxUrl)
+	if err != nil {
+		busyBoxFile.Close()
+		os.Remove(busyBoxFilename)
+		return "", err
+	}
+
+	if _, err := io.Copy(busyBoxFile, resp.Body); err != nil {
+		busyBoxFile.Close()
+		os.Remove(busyBoxFilename)
+		return "", err
+	}
+
+	return busyBoxFilename, nil
+}
+
 func getDownloadDirectory() (string, error) {
 	rootDirectory := viper.GetString("RootDirectory")
 	downloadDirectory := filepath.Join(rootDirectory, ".downloads")

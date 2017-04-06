@@ -41,6 +41,11 @@ var buildCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "could not build glibc: %v\n", err)
 			os.Exit(1)
 		}
+
+		if err := proj.BuildBusyBox(linuxVersion); err != nil {
+			fmt.Fprintf(os.Stderr, "could not build busybox: %v\n", err)
+			os.Exit(1)
+		}
 	},
 }
 
