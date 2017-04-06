@@ -205,8 +205,12 @@ func (proj Project) BuildLinux(version string) error {
 		}
 	}
 
-	if proj.Defconfig != "" {
-		fmt.Println("making defconfig")
+	fmt.Println("making defconfig")
+	if proj.Defconfig == "" {
+		if err := execAt(linuxSrc, "make", "defconfig"); err != nil {
+			return err
+		}
+	} else {
 		if err := execAt(linuxSrc, "make", "lht_defconfig"); err != nil {
 			return err
 		}
