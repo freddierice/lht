@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Project holds variables needed to compile a project.
 type Project struct {
 	Name           string
 	Arch           string `json:"arch"`
@@ -20,6 +21,8 @@ type Project struct {
 	FsSize         uint64 `json:"fsSize"`
 }
 
+// Create creates a new project with a name, and returns a non-nil error on
+// failure.
 func Create(name string) (Project, error) {
 	projectRoot := filepath.Join(viper.GetString("RootDirectory"), name)
 	if f, err := os.Open(projectRoot); err == nil {
@@ -35,6 +38,9 @@ func Create(name string) (Project, error) {
 	return proj, proj.Write()
 }
 
+// Open reads a project configuration, and returns it as a Project. Open only
+// returns an error if the configuration cannot be parsed, or if the
+// configuration could not be found.
 func Open(name string) (Project, error) {
 	readConf := Project{}
 
@@ -54,6 +60,7 @@ func Open(name string) (Project, error) {
 	return readConf, nil
 }
 
+// Path gets the project's root directory.
 func (proj Project) Path() string {
 	return filepath.Join(viper.GetString("RootDirectory"), proj.Name)
 }

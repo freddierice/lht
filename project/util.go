@@ -4,17 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"syscall"
-
-	"github.com/docker/docker/pkg/reexec"
+	"path/filepath"
 )
-
-func init() {
-	reexec.Register("doMount", doMount)
-	if reexec.Init() {
-		os.Exit(0)
-	}
-}
 
 func exists(path string) bool {
 	_, err := os.Stat(path)
@@ -49,27 +40,16 @@ func execAt(dir, cmdStr string, args ...string) error {
 	return os.Chdir(wd)
 }
 
-// mount mounts dev onto dir. Note: this implementation is gross right now. In
-// the future, this will be implemented without mounting.
-func mount(dev, dir string) error {
-	cmd := reexec.Command("doMount", "dev1", "dir1")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+func copyAll(src, dest string) error {
+	var err error
 
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Cloneflags: syscall.CLONE_NEWNS |
-			syscall.CLONE_NEWPID,
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("could not mount: %v", err)
+	if src, err = filepath.Abs(src); err != nil {
+		return err
 	}
 
-	return nil
-}
+	copyAllWalkFunc := func(path string, info os.FileInfo, err error) error {
+		return nil
+	}
 
-func doMount() {
-	fmt.Printf("in doMount(%v, %v)\n", os.Args[1], os.Args[2])
-
-	os.Exit(0)
+	return filepath.Walk(src, copyAllWalkFunc)
 }

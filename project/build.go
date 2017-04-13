@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// BuildSetenv sets the environment variables needed to build the projects.
 func (proj Project) BuildSetenv() {
 	if proj.Arch != "" {
 		os.Setenv("ARCH", proj.Arch)
@@ -17,26 +18,28 @@ func (proj Project) BuildSetenv() {
 	}
 }
 
+// BuildAll builds all of the projects for a specific version of linux.
 func (proj Project) BuildAll(version string) error {
 	if err := proj.BuildLinux(version); err != nil {
-		return fmt.Errorf("could not build linux: %v\n", err)
+		return fmt.Errorf("could not build linux: %v", err)
 	}
 
 	if err := proj.BuildVulnKo(version); err != nil {
-		return fmt.Errorf("could not build vuln-ko: %v\n", err)
+		return fmt.Errorf("could not build vuln-ko: %v", err)
 	}
 
 	if err := proj.BuildGlibc(version); err != nil {
-		return fmt.Errorf("could not build glibc: %v\n", err)
+		return fmt.Errorf("could not build glibc: %v", err)
 	}
 
 	if err := proj.BuildBusyBox(version); err != nil {
-		return fmt.Errorf("could not build busybox: %v\n", err)
+		return fmt.Errorf("could not build busybox: %v", err)
 	}
 
 	return nil
 }
 
+// BuildVulnKo builds the vuln-ko kernel module.
 func (proj Project) BuildVulnKo(version string) error {
 	proj.BuildSetenv()
 
@@ -61,6 +64,7 @@ func (proj Project) BuildVulnKo(version string) error {
 	return execAt(vulnDirNew, "make")
 }
 
+// BuildBusyBox builds the busybox.
 func (proj Project) BuildBusyBox(version string) error {
 	proj.BuildSetenv()
 	fmt.Println("downloading busybox")
@@ -110,6 +114,7 @@ func (proj Project) BuildBusyBox(version string) error {
 	return nil
 }
 
+// BuildGlibc builds the Glibc project for a given linux version.
 func (proj Project) BuildGlibc(version string) error {
 	proj.BuildSetenv()
 	fmt.Println("downloading glibc")
@@ -193,6 +198,7 @@ func (proj Project) BuildGlibc(version string) error {
 	return nil
 }
 
+// BuildLinux compiles the linux source.
 func (proj Project) BuildLinux(version string) error {
 
 	proj.BuildSetenv()

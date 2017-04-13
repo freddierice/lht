@@ -12,8 +12,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var majorRegex *regexp.Regexp = regexp.MustCompile("^[0-9]*")
+var majorRegex = regexp.MustCompile("^[0-9]*")
 
+// DownloadVulnKo downloads the vuln-ko project to the download directory and
+// returns the filepath to the git repository.
 func (proj Project) DownloadVulnKo() (string, error) {
 	downloadDirectory, err := getDownloadDirectory()
 	if err != nil {
@@ -36,8 +38,8 @@ func (proj Project) DownloadVulnKo() (string, error) {
 // DownloadGlibc downloads a version of linux, and returns the filepath
 func (proj Project) DownloadGlibc() (string, error) {
 	glibcArchiveFilename := fmt.Sprintf("glibc-%v.tar.gz", proj.GlibcVersion)
-	glibcArchiveUrl := fmt.Sprintf("https://ftp.gnu.org/gnu/glibc/glibc-%v.tar.gz", proj.GlibcVersion)
-	return download(glibcArchiveFilename, glibcArchiveUrl)
+	glibcArchiveURL := fmt.Sprintf("https://ftp.gnu.org/gnu/glibc/glibc-%v.tar.gz", proj.GlibcVersion)
+	return download(glibcArchiveFilename, glibcArchiveURL)
 }
 
 // DownloadLinux downloads a version of linux, and returns the filepath.
@@ -45,16 +47,16 @@ func (proj Project) DownloadLinux(version string) (string, error) {
 	versionMajor := majorRegex.FindString(version)
 
 	linuxFilename := fmt.Sprintf("linux-%v.tar.xz", version)
-	linuxUrl := fmt.Sprintf("https://cdn.kernel.org/pub/linux/kernel/v%v.x/linux-%v.tar.xz", versionMajor, version)
-	return download(linuxFilename, linuxUrl)
+	linuxURL := fmt.Sprintf("https://cdn.kernel.org/pub/linux/kernel/v%v.x/linux-%v.tar.xz", versionMajor, version)
+	return download(linuxFilename, linuxURL)
 }
 
-// DownloadBuysBox downloads BusyBox with version and returns its filepath.
+// DownloadBusyBox downloads BusyBox with version and returns its filepath.
 func DownloadBusyBox(version string) (string, error) {
 
 	busyBoxFilename := fmt.Sprintf("busybox-%v.tar.bz2", version)
-	busyBoxUrl := fmt.Sprintf("https://busybox.net/downloads/busybox-%v.tar.bz2", version)
-	return download(busyBoxFilename, busyBoxUrl)
+	busyBoxURL := fmt.Sprintf("https://busybox.net/downloads/busybox-%v.tar.bz2", version)
+	return download(busyBoxFilename, busyBoxURL)
 }
 
 // getDownloadDirectory returns the folder used for downloading archives to be
@@ -69,7 +71,7 @@ func getDownloadDirectory() (string, error) {
 // download attempts to save the file at fileUrl to filename in the download
 // directory. download will return the full path to the file after it has
 // downloaded completely, or return an error.
-func download(filename, fileUrl string) (string, error) {
+func download(filename, fileURL string) (string, error) {
 	downloadDirectory, err := getDownloadDirectory()
 	if err != nil {
 		return "", err
@@ -86,7 +88,7 @@ func download(filename, fileUrl string) (string, error) {
 	}
 	defer downloadFile.Close()
 
-	resp, err := http.Get(fileUrl)
+	resp, err := http.Get(fileURL)
 	if err != nil {
 		downloadFile.Close()
 		os.Remove(filePath)
