@@ -1,8 +1,9 @@
 package project
 
+import "path/filepath"
+
 // Compile builds a root file system
 func (proj Project) Compile(version string) error {
-	// versionPath := filepath.Join(proj.Path(), version)
-
-	return nil
+	versionDir := filepath.Join(proj.Path(), version)
+	return doMountCopy(versionDir)
 }

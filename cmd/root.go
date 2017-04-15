@@ -52,8 +52,8 @@ func initConfig() {
 
 	viper.SetDefault("Threads", "4")
 	viper.Set("RootDirectory", rootDirectory)
-	viper.SetConfigName(".lht")      // name of config file (without extension)
-	viper.AddConfigPath(usr.HomeDir) // adding home directory as first search path
+	viper.SetConfigName("lht")  // name of config file (without extension)
+	viper.AddConfigPath("/etc") // adding /etc directory as first search path
 
 	// If a config file is not found, create one
 	if err := viper.ReadInConfig(); err != nil {

@@ -2,6 +2,7 @@ package project
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,15 +41,38 @@ func execAt(dir, cmdStr string, args ...string) error {
 	return os.Chdir(wd)
 }
 
+// copyAll copies all files from src to dest.
 func copyAll(src, dest string) error {
 	var err error
 
 	if src, err = filepath.Abs(src); err != nil {
 		return err
 	}
+	if dest, err = filepath.Abs(dest); err != nil {
+		return err
+	}
+	srcLen := len(src)
 
 	copyAllWalkFunc := func(path string, info os.FileInfo, err error) error {
-		return nil
+		newDest := filepath.Join(dest, string(path[srcLen:]))
+		if info.IsDir() {
+			return os.MkdirAll(newDest, info.Mode())
+		}
+
+		destFile, err := os.OpenFile(newDest, os.O_RDWR|os.O_CREATE, info.Mode())
+		if err != nil {
+			return err
+		}
+		defer destFile.Close()
+
+		srcFile, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer srcFile.Close()
+
+		_, err = io.Copy(destFile, srcFile)
+		return err
 	}
 
 	return filepath.Walk(src, copyAllWalkFunc)
