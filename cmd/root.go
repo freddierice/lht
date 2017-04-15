@@ -44,7 +44,7 @@ func initConfig() {
 		fmt.Fprintf(os.Stderr, "user has no home directory\n")
 		os.Exit(1)
 	}
-	rootDirectory := filepath.Join(usr.HomeDir, ".lht")
+	rootDirectory := "/opt/lht"
 	if err := os.MkdirAll(rootDirectory, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "could not create root directory: %v\n", err)
 		os.Exit(1)
