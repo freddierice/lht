@@ -67,6 +67,31 @@ func (builder *Builder) CreateRootFS() error {
 		return err
 	}
 
+	// setup filesystem
+	for _, dir := range []string{"dev", "etc", "proc", "sys"} {
+		os.MkdirAll(filepath.Join(mountDir, dir), 0755)
+	}
+	os.MkdirAll(filepath.Join(mountDir, "etc", "init.d"), 0755)
+
+	unix.Mknod(filepath.Join(mountDir, "dev", "tty0"), unix.S_IFCHR|0620, 4<<8|0)
+	unix.Mknod(filepath.Join(mountDir, "dev", "tty1"), unix.S_IFCHR|0620, 4<<8|1)
+	unix.Mknod(filepath.Join(mountDir, "dev", "tty2"), unix.S_IFCHR|0620, 4<<8|2)
+	unix.Mknod(filepath.Join(mountDir, "dev", "tty3"), unix.S_IFCHR|0620, 4<<8|3)
+	unix.Mknod(filepath.Join(mountDir, "dev", "tty4"), unix.S_IFCHR|0620, 4<<8|4)
+
+	simpleStart := `
+#!/bin/bash
+mount -t proc proc /proc -o rw,nosuid,nodev,noexec,relatime
+mount -t sysfs sys /sys -o rw,nosuid,nodev,noexec,relatime
+`
+	f, err := os.Create(filepath.Join(mountDir, "etc", "init.d", "rcS"))
+	if err != nil {
+		return err
+	}
+	f.Chmod(0755)
+	f.WriteString(simpleStart)
+	f.Close()
+
 	if err := unix.Unmount(mountDir, 0); err != nil {
 		return err
 	}
