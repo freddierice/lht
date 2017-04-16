@@ -27,4 +27,4 @@ _testmain.go
 *.swp
 
 # project specific files
-lht
+lht$
