@@ -43,10 +43,6 @@ func (proj *Project) BuildAll(name string) error {
 		return fmt.Errorf("could not build busybox: %v", err)
 	}
 
-	if err := proj.Compile(name); err != nil {
-		return fmt.Errorf("could not compile rootfs: %v", err)
-	}
-
 	return nil
 }
 
