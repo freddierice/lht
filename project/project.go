@@ -104,6 +104,14 @@ func Open(name string) (*Project, error) {
 	return readConf, nil
 }
 
+// Delete removes a project.
+func (proj *Project) Delete() error {
+	proj.Close()
+	os.RemoveAll(proj.Path())
+	os.Remove(proj.ConfigPath())
+	return nil
+}
+
 // Close cleans up after a project when it is no longer in use. For the time
 // being this is only the project's file lock.
 func (proj *Project) Close() error {
@@ -144,13 +152,17 @@ func (proj *Project) Path() string {
 	return filepath.Join(getRootDir(), proj.Name)
 }
 
+// ConfigPath gets the project's configuration file.
+func (proj *Project) ConfigPath() string {
+	return filepath.Join(getConfDir(), proj.Name+".json")
+}
+
 // Commit takes the in memory version of the project and writes it to the
 // configuration file on disk.
 func (proj *Project) Commit() error {
-	confDir := getConfDir()
 
-	projectConf := filepath.Join(confDir, proj.Name+".json")
-	projectConfTmp := filepath.Join(confDir, "."+proj.Name+".json")
+	projectConf := proj.ConfigPath()
+	projectConfTmp := filepath.Join(filepath.Dir(projectConf), "."+filepath.Base(projectConf))
 
 	projectConfFile, err := os.Create(projectConfTmp)
 	if err != nil {
