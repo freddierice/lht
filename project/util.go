@@ -13,6 +13,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+// ErrNotRoot is an error produced when the program expects to be running as
+// root, but instead is running as an unprivileged user.
+var ErrNotRoot = fmt.Errorf("not root")
+
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
@@ -102,7 +106,7 @@ func CheckInstalled() bool {
 // Install sets lht up correctly.
 func Install() error {
 	if unix.Getuid() != 0 || unix.Getgid() != 0 {
-		return fmt.Errorf("not root. please run 'sudo lht' for first time installation.")
+		return ErrNotRoot
 	}
 	if !exists("/etc/lht.yaml") {
 		f, err := os.Create("/etc/lht.yaml")

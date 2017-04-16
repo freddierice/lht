@@ -1,22 +1,10 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/freddierice/lht/project"
 	"github.com/spf13/cobra"
 )
 
@@ -26,13 +14,35 @@ var linuxAddCmd = &cobra.Command{
 	Short: "Add a version of linux to a project",
 	Long:  `Adds a version of linux to compile`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) < 2 {
+		if len(args) != 2 {
 			cmd.Usage()
 			os.Exit(1)
 		}
+
+		projectName := args[0]
+		buildVersion := args[1]
+
+		buildName, _ := cmd.Flags().GetString("name")
+		if buildName == "" {
+			buildName = buildVersion
+		}
+
+		proj, err := project.Open(projectName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not open project: %v\n")
+			os.Exit(1)
+		}
+
+		proj.Builds[buildName] = project.LinuxBuild{
+			Name:         buildName,
+			LinuxVersion: buildVersion,
+		}
+
+		proj.Close()
 	},
 }
 
 func init() {
+	linuxAddCmd.Flags().StringP("name", "n", "", "name for the linux build (defaults to version number)")
 	linuxCmd.AddCommand(linuxAddCmd)
 }

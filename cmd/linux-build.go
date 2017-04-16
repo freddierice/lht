@@ -9,8 +9,8 @@ import (
 )
 
 // buildCmd represents the build command
-var buildCmd = &cobra.Command{
-	Use:   "build <project name> <linux version>",
+var buildLinuxCmd = &cobra.Command{
+	Use:   "build <project name> <build name>",
 	Short: "builds a linux image with a project and version number",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -35,6 +35,5 @@ var buildCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(buildCmd)
-
+	linuxCmd.AddCommand(buildLinuxCmd)
 }

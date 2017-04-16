@@ -42,6 +42,9 @@ func InitConfig() {
 		fmt.Fprintf(os.Stderr, "lht is not configured.. running installation.\n")
 		if err := project.Install(); err != nil {
 			fmt.Fprintf(os.Stderr, "could not install: %v\n", err)
+			if err == project.ErrNotRoot {
+				fmt.Fprintf(os.Stderr, "please run `sudo lht` to install default files")
+			}
 			os.Exit(1)
 		}
 		fmt.Fprintf(os.Stderr, "lht has been installed.\n")
