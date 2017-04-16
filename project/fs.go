@@ -22,6 +22,7 @@ func (builder *Builder) CreateRootFS() error {
 	defer os.RemoveAll(mountDir)
 
 	fsImagePath := builder.GetBuildDir("rootfs.img")
+	os.Remove(fsImagePath)
 
 	if !exists(fsImagePath) {
 		stats, err := os.Stat(filepath.Dir(fsImagePath))
@@ -73,14 +74,13 @@ func (builder *Builder) CreateRootFS() error {
 	}
 	os.MkdirAll(filepath.Join(mountDir, "etc", "init.d"), 0755)
 
-	unix.Mknod(filepath.Join(mountDir, "dev", "tty0"), unix.S_IFCHR|0620, 4<<8|0)
-	unix.Mknod(filepath.Join(mountDir, "dev", "tty1"), unix.S_IFCHR|0620, 4<<8|1)
-	unix.Mknod(filepath.Join(mountDir, "dev", "tty2"), unix.S_IFCHR|0620, 4<<8|2)
-	unix.Mknod(filepath.Join(mountDir, "dev", "tty3"), unix.S_IFCHR|0620, 4<<8|3)
-	unix.Mknod(filepath.Join(mountDir, "dev", "tty4"), unix.S_IFCHR|0620, 4<<8|4)
-
 	simpleStart := `
 #!/bin/bash
+mknod /dev/tty0 c 4 0
+mknod /dev/tty1 c 4 1
+mknod /dev/tty2 c 4 2
+mknod /dev/tty3 c 4 3
+mknod /dev/tty4 c 4 4
 mount -t proc proc /proc -o rw,nosuid,nodev,noexec,relatime
 mount -t sysfs sys /sys -o rw,nosuid,nodev,noexec,relatime
 `
