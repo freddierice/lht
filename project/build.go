@@ -10,8 +10,15 @@ import (
 	"github.com/spf13/viper"
 )
 
+// LinuxBuild contains information about a specific build within a project.
+type LinuxBuild struct {
+	Name         string                 `json:"name"`
+	LinuxVersion string                 `json:"linuxVersion"`
+	Status       map[string]interface{} `json:"status"`
+}
+
 // BuildSetenv sets the environment variables needed to build the projects.
-func (proj Project) BuildSetenv() {
+func (proj *Project) BuildSetenv() {
 	if proj.Arch != "" {
 		os.Setenv("ARCH", proj.Arch)
 		os.Setenv("CROSS_COMPILE", proj.Target+"-")
@@ -19,24 +26,24 @@ func (proj Project) BuildSetenv() {
 }
 
 // BuildAll builds all of the projects for a specific version of linux.
-func (proj Project) BuildAll(version string) error {
-	if err := proj.BuildLinux(version); err != nil {
+func (proj *Project) BuildAll(name string) error {
+	if err := proj.BuildLinux(name); err != nil {
 		return fmt.Errorf("could not build linux: %v", err)
 	}
 
-	if err := proj.BuildVulnKo(version); err != nil {
+	if err := proj.BuildVulnKo(name); err != nil {
 		return fmt.Errorf("could not build vuln-ko: %v", err)
 	}
 
-	if err := proj.BuildGlibc(version); err != nil {
+	if err := proj.BuildGlibc(name); err != nil {
 		return fmt.Errorf("could not build glibc: %v", err)
 	}
 
-	if err := proj.BuildBusyBox(version); err != nil {
+	if err := proj.BuildBusyBox(name); err != nil {
 		return fmt.Errorf("could not build busybox: %v", err)
 	}
 
-	if err := proj.Compile(version); err != nil {
+	if err := proj.Compile(name); err != nil {
 		return fmt.Errorf("could not compile rootfs: %v", err)
 	}
 
@@ -44,7 +51,7 @@ func (proj Project) BuildAll(version string) error {
 }
 
 // BuildVulnKo builds the vuln-ko kernel module.
-func (proj Project) BuildVulnKo(version string) error {
+func (proj *Project) BuildVulnKo(name string) error {
 	proj.BuildSetenv()
 
 	fmt.Println("downloading vuln-ko")
@@ -53,7 +60,7 @@ func (proj Project) BuildVulnKo(version string) error {
 		return err
 	}
 
-	vulnDirNew := filepath.Join(proj.Path(), version, "vuln-ko")
+	vulnDirNew := filepath.Join(proj.Path(), name, "vuln-ko")
 	if !exists(vulnDirNew) {
 		// TODO: put this in code
 		cmd := exec.Command("cp", "-rf", vulnDir, vulnDirNew)
@@ -63,13 +70,13 @@ func (proj Project) BuildVulnKo(version string) error {
 		}
 	}
 
-	os.Setenv("BUILD_DIR", filepath.Join(proj.Path(), version, "linux"))
+	os.Setenv("BUILD_DIR", filepath.Join(proj.Path(), name, "linux"))
 	fmt.Println("building vuln-ko")
 	return execAt(vulnDirNew, "make")
 }
 
 // BuildBusyBox builds the busybox.
-func (proj Project) BuildBusyBox(version string) error {
+func (proj *Project) BuildBusyBox(name string) error {
 	proj.BuildSetenv()
 	fmt.Println("downloading busybox")
 	filename, err := DownloadBusyBox(proj.BusyBoxVersion)
@@ -77,7 +84,7 @@ func (proj Project) BuildBusyBox(version string) error {
 		return err
 	}
 
-	versionPath := filepath.Join(proj.Path(), version)
+	versionPath := filepath.Join(proj.Path(), name)
 	if err := os.MkdirAll(versionPath, 0755); err != nil {
 		return err
 	}
@@ -119,7 +126,7 @@ func (proj Project) BuildBusyBox(version string) error {
 }
 
 // BuildGlibc builds the Glibc project for a given linux version.
-func (proj Project) BuildGlibc(version string) error {
+func (proj *Project) BuildGlibc(version string) error {
 	proj.BuildSetenv()
 	fmt.Println("downloading glibc")
 	filename, err := proj.DownloadGlibc()
@@ -203,7 +210,7 @@ func (proj Project) BuildGlibc(version string) error {
 }
 
 // BuildLinux compiles the linux source.
-func (proj Project) BuildLinux(version string) error {
+func (proj *Project) BuildLinux(version string) error {
 
 	proj.BuildSetenv()
 	fmt.Println("downloading linux")

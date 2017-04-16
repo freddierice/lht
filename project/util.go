@@ -6,6 +6,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+
+	"golang.org/x/sys/unix"
+
+	"github.com/spf13/viper"
 )
 
 func exists(path string) bool {
@@ -76,4 +81,67 @@ func copyAll(src, dest string) error {
 	}
 
 	return filepath.Walk(src, copyAllWalkFunc)
+}
+
+// CheckInstalled returns true if the system is configured correctly, and false
+// if lht needs to run the install again.
+func CheckInstalled() bool {
+	// look for a configuration file
+	if !exists("/etc/lht.yaml") {
+		return false
+	}
+
+	// check for root directory
+	if !exists(viper.GetString("RootDirectory")) {
+		return false
+	}
+
+	return true
+}
+
+// Install sets lht up correctly.
+func Install() error {
+	if unix.Getuid() != 0 || unix.Getgid() != 0 {
+		return fmt.Errorf("not root. please run 'sudo lht' for first time installation.")
+	}
+	if !exists("/etc/lht.yaml") {
+		f, err := os.Create("/etc/lht.yaml")
+		if err != nil {
+			return err
+		}
+		if err := f.Chown(0, 0); err != nil {
+			return err
+		}
+		if err := f.Chmod(0644); err != nil {
+			return err
+		}
+		f.Close()
+	}
+
+	uid := 0
+	gid := 0
+	if uidStr := os.Getenv("SUDO_UID"); uidStr != "" {
+		var err error
+		if uid, err = strconv.Atoi(uidStr); err != nil {
+			return err
+		}
+	}
+	if uidStr := os.Getenv("SUDO_GID"); uidStr != "" {
+		var err error
+		if uid, err = strconv.Atoi(uidStr); err != nil {
+			return err
+		}
+	}
+
+	rootDirectory := viper.GetString("RootDirectory")
+	if !exists(rootDirectory) {
+		if err := os.MkdirAll(rootDirectory, 0755); err != nil {
+			return err
+		}
+		if err := os.Chown(rootDirectory, uid, gid); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

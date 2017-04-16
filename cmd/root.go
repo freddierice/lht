@@ -3,9 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"os/user"
-	"path/filepath"
 
+	"github.com/freddierice/lht/project"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -28,41 +27,30 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(InitConfig)
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
-
-	// get user and home directory for defaults
-	usr, err := user.Current()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "could not get current user: %v\n", err)
-		os.Exit(1)
-	}
-	if usr.HomeDir == "" {
-		fmt.Fprintf(os.Stderr, "user has no home directory\n")
-		os.Exit(1)
-	}
-	rootDirectory := "/opt/lht"
-	if err := os.MkdirAll(rootDirectory, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "could not create root directory: %v\n", err)
-		os.Exit(1)
-	}
+// InitConfig reads in config file and ENV variables if set.
+func InitConfig() {
 
 	viper.SetDefault("Threads", "4")
-	viper.Set("RootDirectory", rootDirectory)
+	viper.SetDefault("RootDirectory", "/opt/lht")
 	viper.SetConfigName("lht")  // name of config file (without extension)
 	viper.AddConfigPath("/etc") // adding /etc directory as first search path
 
-	// If a config file is not found, create one
-	if err := viper.ReadInConfig(); err != nil {
-		// create a new one
-		confFile, err := os.Create(filepath.Join(usr.HomeDir, ".lht.yaml"))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not create root configuration file (%v): %v\n", confFile, err)
+	if !project.CheckInstalled() {
+		fmt.Fprintf(os.Stderr, "lht is not configured.. running installation.\n")
+		if err := project.Install(); err != nil {
+			fmt.Fprintf(os.Stderr, "could not install: %v\n", err)
 			os.Exit(1)
 		}
-		confFile.Close()
+		fmt.Fprintf(os.Stderr, "lht has been installed.\n")
+		os.Exit(0)
+	}
+
+	// config file should be found since we have checked the installation
+	if err := viper.ReadInConfig(); err != nil {
+		fmt.Fprintf(os.Stderr, "could not read configuration file: %v\n", err)
+		os.Exit(1)
 	}
 }

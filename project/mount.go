@@ -7,15 +7,9 @@ import (
 	"path/filepath"
 
 	"golang.org/x/sys/unix"
-
-	"gopkg.in/freddierice/go-losetup.v1"
 )
 
 func doMountCopy(versionDir string) error {
-
-	if err := os.Chdir(versionDir); err != nil {
-		return err
-	}
 
 	mountDir, err := ioutil.TempDir("", "lht")
 	if err != nil {
@@ -43,13 +37,15 @@ func doMountCopy(versionDir string) error {
 		}
 	}
 
-	dev, err := losetup.Attach("rootfs.img", 0, false)
-	if err != nil {
-		return err
-	}
+	/*
+		dev, err := losetup.Attach("rootfs.img", 0, false)
+		if err != nil {
+			return err
+		}
+	*/
 
 	// TODO: add unix.MS_NOEXEC | unix.MS_NOSUID
-	if err := unix.Mount(dev.Path(), mountDir, "ext2", 0, ""); err != nil {
+	if err := unix.Mount("rootfs.img", mountDir, "ext2", 0, ""); err != nil {
 		return err
 	}
 
