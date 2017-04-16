@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/freddierice/lht/project"
+	"gopkg.in/freddierice/lht.v1/project"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

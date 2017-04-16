@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/freddierice/lht/project"
+	"gopkg.in/freddierice/lht.v1/project"
 	"github.com/spf13/cobra"
 )
 
@@ -22,36 +22,46 @@ architectures, configurations, etc.`,
 		}
 		projectName := args[0]
 
-		fmt.Printf("creating project %v\n", projectName)
-		proj, err := project.Create(projectName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not create project: %v\n", err)
-			os.Exit(1)
-		}
-
-		proj.Meta.Arch, _ = cmd.Flags().GetString("arch")
-		proj.Target, _ = cmd.Flags().GetString("target")
-		proj.Host, _ = cmd.Flags().GetString("host")
-		proj.GlibcVersion, _ = cmd.Flags().GetString("glibc-version")
-		proj.BusyBoxVersion, _ = cmd.Flags().GetString("busybox-version")
-		proj.FsSize, err = cmd.Flags().GetUint64("fs-size")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "invalid fsSize: %v\n", err)
-			os.Exit(1)
-		}
-
-		defconfigFile, _ := cmd.Flags().GetString("defconfig")
-		if defconfigFile != "" {
-			buf, err := ioutil.ReadFile(defconfigFile)
+		err := func() error {
+			fmt.Printf("creating project %v\n", projectName)
+			proj, err := project.Create(projectName)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "could not read defconfig file %v\n", err)
-				os.Exit(1)
+				return fmt.Errorf("could not create project: %v", err)
 			}
-			proj.Defconfig = string(buf)
-		}
 
-		if err := proj.Commit(); err != nil {
-			fmt.Fprintf(os.Stderr, "could not write out project configuration: %v\n", err)
+			proj.Meta.Arch, _ = cmd.Flags().GetString("arch")
+			proj.Target, _ = cmd.Flags().GetString("target")
+			proj.Host, _ = cmd.Flags().GetString("host")
+			proj.GlibcVersion, _ = cmd.Flags().GetString("glibc-version")
+			proj.BusyBoxVersion, _ = cmd.Flags().GetString("busybox-version")
+			proj.FsSize, err = cmd.Flags().GetUint64("fs-size")
+			if err != nil {
+				proj.Delete()
+				return fmt.Errorf("invalid fsSize: %v", err)
+			}
+
+			defconfigFile, _ := cmd.Flags().GetString("defconfig")
+			if defconfigFile != "" {
+				buf, err := ioutil.ReadFile(defconfigFile)
+				if err != nil {
+					proj.Delete()
+					return fmt.Errorf("could not read defconfig: %v", err)
+				}
+				proj.Defconfig = string(buf)
+			}
+
+			if err := proj.Commit(); err != nil {
+				proj.Delete()
+				return fmt.Errorf("could not write out project configuration: %v", err)
+			}
+
+			proj.Close()
+
+			return nil
+		}()
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
 	},

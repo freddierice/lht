@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/freddierice/lht/project"
+	"gopkg.in/freddierice/lht.v1/project"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ var deleteCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := os.RemoveAll(proj.Path()); err != nil {
+		if err := proj.Delete(); err != nil {
 			fmt.Fprintf(os.Stderr, "could not remove project: %v\n", err)
 			os.Exit(1)
 		}
