@@ -148,9 +148,6 @@ func (proj *Project) Path() string {
 // configuration file on disk.
 func (proj *Project) Commit() error {
 	confDir := getConfDir()
-	if err := os.MkdirAll(confDir, 0755); err != nil {
-		return err
-	}
 
 	projectConf := filepath.Join(confDir, proj.Name+".json")
 	projectConfTmp := filepath.Join(confDir, "."+proj.Name+".json")

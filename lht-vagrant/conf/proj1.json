@@ -1,0 +1,1 @@
+{"Name":"proj1","build":{"vuln":{"name":"vuln","linuxVersion":"4.9.7","status":{}}},"projectMeta":{"arch":"arm","target":"arm-linux-gnueabihf","host":"x86_64-pc-linux-gnu","defconfig":"","glibcVersion":"2.25","busyBoxVersion":"1.26.2","fsSize":536870912}}

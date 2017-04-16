@@ -1,19 +1,25 @@
 package project
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/spf13/viper"
 )
+
+func dirCreate(path string) string {
+	os.MkdirAll(path, 0755)
+	return path
+}
 
 func getRootDir() string {
 	return viper.GetString("RootDirectory")
 }
 
 func getDownloadDir() string {
-	return filepath.Join(getRootDir(), ".downloads")
+	return dirCreate(filepath.Join(getRootDir(), ".downloads"))
 }
 
 func getConfDir() string {
-	return filepath.Join(getRootDir(), "conf")
+	return dirCreate(filepath.Join(getRootDir(), "conf"))
 }
