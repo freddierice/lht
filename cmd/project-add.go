@@ -29,7 +29,7 @@ architectures, configurations, etc.`,
 			os.Exit(1)
 		}
 
-		proj.Arch, _ = cmd.Flags().GetString("arch")
+		proj.Meta.Arch, _ = cmd.Flags().GetString("arch")
 		proj.Target, _ = cmd.Flags().GetString("target")
 		proj.Host, _ = cmd.Flags().GetString("host")
 		proj.GlibcVersion, _ = cmd.Flags().GetString("glibc-version")

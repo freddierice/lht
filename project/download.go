@@ -8,20 +8,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-
-	"github.com/spf13/viper"
 )
 
 var majorRegex = regexp.MustCompile("^[0-9]*")
 
 // DownloadVulnKo downloads the vuln-ko project to the download directory and
 // returns the filepath to the git repository.
-func (proj Project) DownloadVulnKo() (string, error) {
-	downloadDirectory, err := getDownloadDirectory()
-	if err != nil {
-		return "", err
-	}
-	vulnKoSrc := filepath.Join(downloadDirectory, "vuln-ko")
+func (builder *Builder) DownloadVulnKo() (string, error) {
+	vulnKoSrc := filepath.Join(builder.DownloadDir, "vuln-ko")
 	if exists(vulnKoSrc) {
 		return vulnKoSrc, nil
 	}
@@ -36,48 +30,34 @@ func (proj Project) DownloadVulnKo() (string, error) {
 }
 
 // DownloadGlibc downloads a version of linux, and returns the filepath
-func (proj Project) DownloadGlibc() (string, error) {
-	glibcArchiveFilename := fmt.Sprintf("glibc-%v.tar.gz", proj.GlibcVersion)
-	glibcArchiveURL := fmt.Sprintf("https://ftp.gnu.org/gnu/glibc/glibc-%v.tar.gz", proj.GlibcVersion)
-	return download(glibcArchiveFilename, glibcArchiveURL)
+func (builder *Builder) DownloadGlibc() (string, error) {
+	glibcArchiveFilename := fmt.Sprintf("glibc-%v.tar.gz", builder.Meta.GlibcVersion)
+	glibcArchiveURL := fmt.Sprintf("https://ftp.gnu.org/gnu/glibc/glibc-%v.tar.gz", builder.Meta.GlibcVersion)
+	return download(glibcArchiveFilename, builder.DownloadDir, glibcArchiveURL)
 }
 
 // DownloadLinux downloads a version of linux, and returns the filepath.
-func (proj Project) DownloadLinux(version string) (string, error) {
-	versionMajor := majorRegex.FindString(version)
+func (builder *Builder) DownloadLinux() (string, error) {
+	versionMajor := majorRegex.FindString(builder.LinuxBuild.LinuxVersion)
 
-	linuxFilename := fmt.Sprintf("linux-%v.tar.xz", version)
-	linuxURL := fmt.Sprintf("https://cdn.kernel.org/pub/linux/kernel/v%v.x/linux-%v.tar.xz", versionMajor, version)
-	return download(linuxFilename, linuxURL)
+	linuxFilename := fmt.Sprintf("linux-%v.tar.xz", builder.LinuxBuild.LinuxVersion)
+	linuxURL := fmt.Sprintf("https://cdn.kernel.org/pub/linux/kernel/v%v.x/linux-%v.tar.xz", versionMajor, builder.LinuxBuild.LinuxVersion)
+	return download(linuxFilename, builder.DownloadDir, linuxURL)
 }
 
 // DownloadBusyBox downloads BusyBox with version and returns its filepath.
-func DownloadBusyBox(version string) (string, error) {
+func (builder *Builder) DownloadBusyBox() (string, error) {
 
-	busyBoxFilename := fmt.Sprintf("busybox-%v.tar.bz2", version)
-	busyBoxURL := fmt.Sprintf("https://busybox.net/downloads/busybox-%v.tar.bz2", version)
-	return download(busyBoxFilename, busyBoxURL)
-}
-
-// getDownloadDirectory returns the folder used for downloading archives to be
-// built by projects. If the directory does not exist, it will be made. Returns
-// an error if the directory could not be created.
-func getDownloadDirectory() (string, error) {
-	rootDirectory := viper.GetString("RootDirectory")
-	downloadDirectory := filepath.Join(rootDirectory, ".downloads")
-	return downloadDirectory, os.MkdirAll(downloadDirectory, 0755)
+	busyBoxFilename := fmt.Sprintf("busybox-%v.tar.bz2", builder.Meta.BusyBoxVersion)
+	busyBoxURL := fmt.Sprintf("https://busybox.net/downloads/busybox-%v.tar.bz2", builder.Meta.BusyBoxVersion)
+	return download(busyBoxFilename, builder.DownloadDir, busyBoxURL)
 }
 
 // download attempts to save the file at fileUrl to filename in the download
 // directory. download will return the full path to the file after it has
 // downloaded completely, or return an error.
-func download(filename, fileURL string) (string, error) {
-	downloadDirectory, err := getDownloadDirectory()
-	if err != nil {
-		return "", err
-	}
-
-	filePath := filepath.Join(downloadDirectory, filename)
+func download(filename, downloadDir, fileURL string) (string, error) {
+	filePath := filepath.Join(downloadDir, filename)
 	if exists(filePath) {
 		return filePath, nil
 	}

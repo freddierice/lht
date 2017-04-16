@@ -13,17 +13,22 @@ import (
 
 // Project holds variables needed to compile a project.
 type Project struct {
-	Name           string
-	Arch           string                `json:"arch"`
-	Target         string                `json:"target"`
-	Host           string                `json:"host"`
-	Defconfig      string                `json:"defconfig"`
-	GlibcVersion   string                `json:"glibcVersion"`
-	BusyBoxVersion string                `json:"busyBoxVersion"`
-	FsSize         uint64                `json:"fsSize"`
-	Builds         map[string]LinuxBuild `json:"build"`
+	Name   string
+	Builds map[string]LinuxBuild `json:"build"`
+	lock   lockfile.Lockfile     `json:"-"`
 
-	lock lockfile.Lockfile `json:"-"`
+	Meta `json:"projectMeta"`
+}
+
+// Meta holds metadata that is consistent throughout a project.
+type Meta struct {
+	Arch           string `json:"arch"`
+	Target         string `json:"target"`
+	Host           string `json:"host"`
+	Defconfig      string `json:"defconfig"`
+	GlibcVersion   string `json:"glibcVersion"`
+	BusyBoxVersion string `json:"busyBoxVersion"`
+	FsSize         uint64 `json:"fsSize"`
 }
 
 // Create creates a new project with a name, and returns a non-nil error on
@@ -102,6 +107,22 @@ func (proj *Project) Close() error {
 	}
 
 	return nil
+}
+
+// GetBuilder takes a project and a buildName to produce a Builder. If the
+// buildName exists, then we create it, otherwise produce an error.
+func (proj *Project) GetBuilder(buildName string) (*Builder, error) {
+	build, ok := proj.Builds[buildName]
+	if !ok {
+		return nil, fmt.Errorf("build doesn't exist")
+	}
+
+	return &Builder{
+		RootDir:     filepath.Join(proj.Path(), buildName),
+		DownloadDir: filepath.Join(proj.Path(), ".downloads"),
+		Meta:        proj.Meta,
+		LinuxBuild:  build,
+	}, nil
 }
 
 // Path gets the project's root directory.

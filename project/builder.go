@@ -10,36 +10,55 @@ import (
 	"github.com/spf13/viper"
 )
 
-// LinuxBuild contains information about a specific build within a project.
-type LinuxBuild struct {
-	Name         string                 `json:"name"`
-	LinuxVersion string                 `json:"linuxVersion"`
-	Status       map[string]interface{} `json:"status"`
+// Builder contains metadata to build projects. It is generally created by
+// a project combined with a LinuxBuild.
+type Builder struct {
+	RootDir     string
+	DownloadDir string
+
+	Meta
+	LinuxBuild
 }
 
 // BuildSetenv sets the environment variables needed to build the projects.
-func (proj *Project) BuildSetenv() {
-	if proj.Arch != "" {
-		os.Setenv("ARCH", proj.Arch)
-		os.Setenv("CROSS_COMPILE", proj.Target+"-")
+func (builder *Builder) BuildSetenv() {
+	if builder.Meta.Arch != "" {
+		os.Setenv("ARCH", builder.Meta.Arch)
+		os.Setenv("CROSS_COMPILE", builder.Meta.Target+"-")
 	}
 }
 
+// GetStatus determines if a builder has completed a task.
+func (builder *Builder) GetStatus(task string) bool {
+	status, ok := builder.LinuxBuild.Status[task]
+	return status && ok
+}
+
+// SetStatus saves the status of a given task.
+func (builder *Builder) SetStatus(task string, status bool) {
+	builder.LinuxBuild.Status[task] = status
+}
+
+// GetBuildDir appends build to the root directory of this build
+func (builder *Builder) GetBuildDir(build string) string {
+	return filepath.Join(builder.RootDir, build)
+}
+
 // BuildAll builds all of the projects for a specific version of linux.
-func (proj *Project) BuildAll(name string) error {
-	if err := proj.BuildLinux(name); err != nil {
+func (builder *Builder) BuildAll() error {
+	if err := builder.BuildLinux(); err != nil {
 		return fmt.Errorf("could not build linux: %v", err)
 	}
 
-	if err := proj.BuildVulnKo(name); err != nil {
+	if err := builder.BuildVulnKo(); err != nil {
 		return fmt.Errorf("could not build vuln-ko: %v", err)
 	}
 
-	if err := proj.BuildGlibc(name); err != nil {
+	if err := builder.BuildGlibc(); err != nil {
 		return fmt.Errorf("could not build glibc: %v", err)
 	}
 
-	if err := proj.BuildBusyBox(name); err != nil {
+	if err := builder.BuildBusyBox(); err != nil {
 		return fmt.Errorf("could not build busybox: %v", err)
 	}
 
@@ -47,46 +66,55 @@ func (proj *Project) BuildAll(name string) error {
 }
 
 // BuildVulnKo builds the vuln-ko kernel module.
-func (proj *Project) BuildVulnKo(name string) error {
-	proj.BuildSetenv()
+func (builder *Builder) BuildVulnKo() error {
+	if builder.GetStatus("BuildVulnKo") {
+		return nil
+	}
+
+	builder.BuildSetenv()
 
 	fmt.Println("downloading vuln-ko")
-	vulnDir, err := proj.DownloadVulnKo()
+	vulnDir, err := builder.DownloadVulnKo()
 	if err != nil {
 		return err
 	}
 
-	vulnDirNew := filepath.Join(proj.Path(), name, "vuln-ko")
+	vulnDirNew := builder.GetBuildDir("vuln-ko")
 	if !exists(vulnDirNew) {
-		// TODO: put this in code
-		cmd := exec.Command("cp", "-rf", vulnDir, vulnDirNew)
-		if err := cmd.Run(); err != nil {
+		if err := os.MkdirAll(vulnDirNew, 0755); err != nil {
+			return err
+		}
+		if err := copyAll(vulnDir, vulnDirNew); err != nil {
 			os.RemoveAll(vulnDirNew)
 			return err
 		}
 	}
 
-	os.Setenv("BUILD_DIR", filepath.Join(proj.Path(), name, "linux"))
+	os.Setenv("BUILD_DIR", builder.GetBuildDir("linux"))
 	fmt.Println("building vuln-ko")
-	return execAt(vulnDirNew, "make")
+
+	err = execAt(vulnDirNew, "make")
+	if err != nil {
+		return err
+	}
+	builder.SetStatus("BuildVulnKo", true)
+	return nil
 }
 
 // BuildBusyBox builds the busybox.
-func (proj *Project) BuildBusyBox(name string) error {
-	proj.BuildSetenv()
+func (builder *Builder) BuildBusyBox() error {
+	if builder.GetStatus("BuildBusyBox") {
+		return nil
+	}
+	builder.BuildSetenv()
 	fmt.Println("downloading busybox")
-	filename, err := DownloadBusyBox(proj.BusyBoxVersion)
+	filename, err := builder.DownloadBusyBox()
 	if err != nil {
 		return err
 	}
 
-	versionPath := filepath.Join(proj.Path(), name)
-	if err := os.MkdirAll(versionPath, 0755); err != nil {
-		return err
-	}
-
-	busyBoxPath := filepath.Join(versionPath, "busybox")
-	busyBoxPathOld := filepath.Join(versionPath, "busybox-"+proj.BusyBoxVersion)
+	busyBoxPath := builder.GetBuildDir("busybox")
+	busyBoxPathOld := builder.GetBuildDir("busybox-" + builder.Meta.BusyBoxVersion)
 	busyBoxInstallPath := filepath.Join(busyBoxPath, "_install")
 	if exists(busyBoxInstallPath) {
 		return nil
@@ -94,7 +122,7 @@ func (proj *Project) BuildBusyBox(name string) error {
 	if !exists(busyBoxPath) {
 		fmt.Println("extracting busybox")
 		//TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", versionPath, "-xf", filename)
+		cmd := exec.Command("tar", "-C", builder.RootDir, "-xf", filename)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -118,34 +146,34 @@ func (proj *Project) BuildBusyBox(name string) error {
 		return err
 	}
 
+	builder.SetStatus("BuildBusyBox", true)
+
 	return nil
 }
 
 // BuildGlibc builds the Glibc project for a given linux version.
-func (proj *Project) BuildGlibc(version string) error {
-	proj.BuildSetenv()
+func (builder *Builder) BuildGlibc() error {
+	if builder.GetStatus("BuildGlibc") {
+		return nil
+	}
+	builder.BuildSetenv()
 	fmt.Println("downloading glibc")
-	filename, err := proj.DownloadGlibc()
+	filename, err := builder.DownloadGlibc()
 	if err != nil {
 		return err
 	}
 
-	versionPath := filepath.Join(proj.Path(), version)
-	if err := os.MkdirAll(versionPath, 0755); err != nil {
-		return err
-	}
-
 	fmt.Println("extracting glibc")
-	glibcPath := filepath.Join(versionPath, "glibc")
-	glibcPathOld := filepath.Join(versionPath, "glibc-"+proj.GlibcVersion)
-	glibcBuildPath := filepath.Join(versionPath, "glibc-build")
-	sysroot := filepath.Join(versionPath, "sysroot")
+	glibcPath := builder.GetBuildDir("glibc")
+	glibcPathOld := builder.GetBuildDir("glibc-" + builder.Meta.GlibcVersion)
+	glibcBuildPath := builder.GetBuildDir("glibc-build")
+	sysroot := builder.GetBuildDir("sysroot")
 	if exists(sysroot) {
 		return nil
 	}
 	if !exists(glibcPath) {
 		//TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", versionPath, "-xf", filename)
+		cmd := exec.Command("tar", "-C", builder.RootDir, "-xf", filename)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -167,10 +195,10 @@ func (proj *Project) BuildGlibc(version string) error {
 	os.Setenv("CFLAGS", "-O2")
 	os.Setenv("CPPFLAGS", "-O2")
 	os.Setenv("BUILD_CC", "gcc")
-	os.Setenv("CC", proj.Target+"-gcc")
-	os.Setenv("CXX", proj.Target+"-g++")
-	os.Setenv("AR", proj.Target+"-ar")
-	os.Setenv("RANLIB", proj.Target+"-ranlib")
+	os.Setenv("CC", builder.Meta.Target+"-gcc")
+	os.Setenv("CXX", builder.Meta.Target+"-g++")
+	os.Setenv("AR", builder.Meta.Target+"-ar")
+	os.Setenv("RANLIB", builder.Meta.Target+"-ranlib")
 
 	configparams := fmt.Sprintf("slibdir=/lib\nrtlddir=/lib\nsbindir=/bin\nrootsbindir=/bin\nbuild-programs=no\n")
 	configparamsFilename := filepath.Join(glibcPath, "configparams")
@@ -178,12 +206,12 @@ func (proj *Project) BuildGlibc(version string) error {
 		return err
 	}
 
-	headersPath := filepath.Join(versionPath, "headers", "include")
+	headersPath := filepath.Join(builder.RootDir, "headers", "include")
 	err = execAt(glibcBuildPath, "../glibc/configure", "--prefix=/", "--libdir=/lib", "--libexecdir=/lib",
 		"--enable-add-ons", "--enable-kernel=2.6.32", "--enable-lock-elision",
 		"--enable-stackguard-randomization", "--enable-bind-now", "--disable-profile",
-		"--disable-multi-arch", "--disable-werror", "--target="+proj.Target,
-		"--host="+proj.Target, "--build="+proj.Host, "--with-headers="+headersPath)
+		"--disable-multi-arch", "--disable-werror", "--target="+builder.Meta.Target,
+		"--host="+builder.Meta.Target, "--build="+builder.Meta.Host, "--with-headers="+headersPath)
 	if err != nil {
 		return err
 	}
@@ -206,26 +234,21 @@ func (proj *Project) BuildGlibc(version string) error {
 }
 
 // BuildLinux compiles the linux source.
-func (proj *Project) BuildLinux(version string) error {
+func (builder *Builder) BuildLinux() error {
 
-	proj.BuildSetenv()
+	builder.BuildSetenv()
 	fmt.Println("downloading linux")
-	filename, err := proj.DownloadLinux(version)
+	filename, err := builder.DownloadLinux()
 	if err != nil {
 		return err
 	}
 
-	versionPath := filepath.Join(proj.Path(), version)
-	if err := os.MkdirAll(versionPath, 0755); err != nil {
-		return err
-	}
-
-	linuxSrc := filepath.Join(versionPath, "linux")
-	linuxSrcOld := filepath.Join(versionPath, "linux-"+version)
+	linuxSrc := builder.GetBuildDir("linux")
+	linuxSrcOld := builder.GetBuildDir("linux-" + builder.LinuxBuild.LinuxVersion)
 	if !exists(linuxSrc) {
 		fmt.Println("extracting linux")
 		// TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", versionPath, "-xf", filename)
+		cmd := exec.Command("tar", "-C", builder.RootDir, "-xf", filename)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -234,16 +257,16 @@ func (proj *Project) BuildLinux(version string) error {
 		}
 	}
 
-	defconfigFilename := filepath.Join(linuxSrc, "arch", proj.Arch, "configs", "lht_defconfig")
-	if proj.Defconfig != "" {
+	defconfigFilename := filepath.Join(linuxSrc, "arch", builder.Meta.Arch, "configs", "lht_defconfig")
+	if builder.Meta.Defconfig != "" {
 		fmt.Println("writing defconfig")
-		if err := ioutil.WriteFile(defconfigFilename, []byte(proj.Defconfig), 0644); err != nil {
+		if err := ioutil.WriteFile(defconfigFilename, []byte(builder.Meta.Defconfig), 0644); err != nil {
 			return err
 		}
 	}
 
 	fmt.Println("making defconfig")
-	if proj.Defconfig == "" {
+	if builder.Meta.Defconfig == "" {
 		if err := execAt(linuxSrc, "make", "defconfig"); err != nil {
 			return err
 		}
@@ -259,7 +282,7 @@ func (proj *Project) BuildLinux(version string) error {
 	}
 
 	fmt.Println("installing headers")
-	headersDir := filepath.Join(versionPath, "headers")
+	headersDir := builder.GetBuildDir("headers")
 	if !exists(headersDir) {
 		if err := execAt(linuxSrc, "make", "headers_install",
 			"INSTALL_HDR_PATH=../headers"); err != nil {

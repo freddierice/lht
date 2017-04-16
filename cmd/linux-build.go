@@ -19,7 +19,7 @@ var buildLinuxCmd = &cobra.Command{
 			os.Exit(1)
 		}
 		projectName := args[0]
-		linuxVersion := args[1]
+		buildName := args[1]
 
 		proj, err := project.Open(projectName)
 		if err != nil {
@@ -27,8 +27,17 @@ var buildLinuxCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		if err := proj.BuildAll(linuxVersion); err != nil {
-			fmt.Fprintf(os.Stderr, "could not build all.\n %v\n", err)
+		builder, err := proj.GetBuilder(buildName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not open build: %v\n", err)
+			proj.Close()
+			os.Exit(1)
+		}
+
+		err = builder.BuildAll()
+		proj.Builds[buildName] = builder.LinuxBuild
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "could not build all: %v\n", err)
 			os.Exit(1)
 		}
 	},
