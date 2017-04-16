@@ -23,5 +23,8 @@ _testmain.go
 *.test
 *.prof
 
+# vim files
+*.swp
+
 # project specific files
 lht
