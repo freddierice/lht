@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/freddierice/lht/project"
 	"github.com/spf13/cobra"
@@ -29,13 +30,24 @@ var linuxAddCmd = &cobra.Command{
 
 		proj, err := project.Open(projectName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not open project: %v\n")
+			fmt.Fprintf(os.Stderr, "could not open project: %v\n", err)
+			os.Exit(1)
+		}
+
+		if _, ok := proj.Builds[buildName]; ok {
+			fmt.Fprintf(os.Stderr, "build already exists\n")
+			proj.Close()
 			os.Exit(1)
 		}
 
 		proj.Builds[buildName] = project.LinuxBuild{
 			Name:         buildName,
 			LinuxVersion: buildVersion,
+		}
+
+		if err := os.MkdirAll(filepath.Join(proj.Path(), buildName), 0755); err != nil {
+			fmt.Fprintf(os.Stderr, "could not create the build directory: %v\n", err)
+			os.Exit(1)
 		}
 
 		proj.Close()

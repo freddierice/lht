@@ -21,23 +21,30 @@ var buildLinuxCmd = &cobra.Command{
 		projectName := args[0]
 		buildName := args[1]
 
-		proj, err := project.Open(projectName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not open project: %v\n", err)
-			os.Exit(1)
-		}
+		err := func() error {
+			proj, err := project.Open(projectName)
+			if err != nil {
+				return fmt.Errorf("could not open project: %v", err)
 
-		builder, err := proj.GetBuilder(buildName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not open build: %v\n", err)
-			proj.Close()
-			os.Exit(1)
-		}
+			}
+			defer proj.Close()
 
-		err = builder.BuildAll()
-		proj.Builds[buildName] = builder.LinuxBuild
+			builder, err := proj.GetBuilder(buildName)
+			if err != nil {
+				return fmt.Errorf("could not open build: %v", err)
+			}
+
+			err = builder.BuildAll()
+			proj.Builds[buildName] = builder.LinuxBuild
+			if err != nil {
+				return fmt.Errorf("could not build all: %v", err)
+			}
+
+			return nil
+		}()
+
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not build all: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
 	},

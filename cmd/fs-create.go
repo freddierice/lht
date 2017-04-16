@@ -21,15 +21,27 @@ var createCmd = &cobra.Command{
 
 		projectName := args[0]
 		buildName := args[1]
+		err := func() error {
+			proj, err := project.Open(projectName)
+			if err != nil {
+				return fmt.Errorf("could not open project: %v", err)
+			}
+			defer proj.Close()
 
-		proj, err := project.Open(projectName)
+			builder, err := proj.GetBuilder(buildName)
+			if err != nil {
+				return fmt.Errorf("could not open builder: %v", err)
+			}
+
+			if err := builder.CreateRootFS(); err != nil {
+				return fmt.Errorf("could not create root filesystem: %v", err)
+			}
+
+			return nil
+		}()
+
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "could not open project: %v\n", err)
-			os.Exit(1)
-		}
-
-		if err := proj.CreateRootFS(buildName); err != nil {
-			fmt.Fprintf(os.Stderr, "could not create root filesystem: %v\n", err)
+			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
 		}
 	},

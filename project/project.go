@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/nightlyone/lockfile"
-	"github.com/spf13/viper"
 )
 
 // Project holds variables needed to compile a project.
@@ -34,7 +33,7 @@ type Meta struct {
 // Create creates a new project with a name, and returns a non-nil error on
 // failure.
 func Create(name string) (*Project, error) {
-	projectRoot := filepath.Join(viper.GetString("RootDirectory"), name)
+	projectRoot := filepath.Join(getRootDir(), name)
 	if f, err := os.Open(projectRoot); err == nil {
 		f.Close()
 		return nil, fmt.Errorf("project exists")
@@ -43,7 +42,10 @@ func Create(name string) (*Project, error) {
 		return nil, err
 	}
 
-	proj := &Project{Name: name}
+	proj := &Project{
+		Name:   name,
+		Builds: map[string]LinuxBuild{},
+	}
 	return proj, proj.Commit()
 }
 
@@ -54,8 +56,8 @@ func Open(name string) (*Project, error) {
 
 	readConf := &Project{}
 
-	projectRoot := filepath.Join(viper.GetString("RootDirectory"), name)
-	projectConf := filepath.Join(projectRoot, "conf.json")
+	projectRoot := filepath.Join(getRootDir(), name)
+	projectConf := filepath.Join(getConfDir(), name+".json")
 	projectLock := filepath.Join(projectRoot, ".lock")
 
 	// take the lock
@@ -95,6 +97,10 @@ func Open(name string) (*Project, error) {
 		return nil, err
 	}
 
+	if readConf.Builds == nil {
+		readConf.Builds = map[string]LinuxBuild{}
+	}
+
 	return readConf, nil
 }
 
@@ -117,24 +123,37 @@ func (proj *Project) GetBuilder(buildName string) (*Builder, error) {
 		return nil, fmt.Errorf("build doesn't exist")
 	}
 
-	return &Builder{
-		RootDir:     filepath.Join(proj.Path(), buildName),
-		DownloadDir: filepath.Join(proj.Path(), ".downloads"),
+	if build.Status == nil {
+		build.Status = map[string]bool{}
+	}
+
+	builder := &Builder{
+		RootDir:     getRootDir(),
+		ProjectDir:  proj.Path(),
+		BuildDir:    filepath.Join(proj.Path(), buildName),
+		DownloadDir: getDownloadDir(),
 		Meta:        proj.Meta,
 		LinuxBuild:  build,
-	}, nil
+	}
+
+	return builder, nil
 }
 
 // Path gets the project's root directory.
 func (proj *Project) Path() string {
-	return filepath.Join(viper.GetString("RootDirectory"), proj.Name)
+	return filepath.Join(getRootDir(), proj.Name)
 }
 
 // Commit takes the in memory version of the project and writes it to the
 // configuration file on disk.
 func (proj *Project) Commit() error {
-	projectConf := filepath.Join(proj.Path(), "conf.json")
-	projectConfTmp := filepath.Join(proj.Path(), ".conf.json")
+	confDir := getConfDir()
+	if err := os.MkdirAll(confDir, 0755); err != nil {
+		return err
+	}
+
+	projectConf := filepath.Join(confDir, proj.Name+".json")
+	projectConfTmp := filepath.Join(confDir, "."+proj.Name+".json")
 
 	projectConfFile, err := os.Create(projectConfTmp)
 	if err != nil {

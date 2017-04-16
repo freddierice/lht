@@ -15,6 +15,8 @@ import (
 type Builder struct {
 	RootDir     string
 	DownloadDir string
+	ProjectDir  string
+	BuildDir    string
 
 	Meta
 	LinuxBuild
@@ -41,7 +43,7 @@ func (builder *Builder) SetStatus(task string, status bool) {
 
 // GetBuildDir appends build to the root directory of this build
 func (builder *Builder) GetBuildDir(build string) string {
-	return filepath.Join(builder.RootDir, build)
+	return filepath.Join(builder.BuildDir, build)
 }
 
 // BuildAll builds all of the projects for a specific version of linux.
@@ -122,7 +124,7 @@ func (builder *Builder) BuildBusyBox() error {
 	if !exists(busyBoxPath) {
 		fmt.Println("extracting busybox")
 		//TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", builder.RootDir, "-xf", filename)
+		cmd := exec.Command("tar", "-C", builder.BuildDir, "-xf", filename)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -173,7 +175,7 @@ func (builder *Builder) BuildGlibc() error {
 	}
 	if !exists(glibcPath) {
 		//TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", builder.RootDir, "-xf", filename)
+		cmd := exec.Command("tar", "-C", builder.BuildDir, "-xf", filename)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -206,7 +208,7 @@ func (builder *Builder) BuildGlibc() error {
 		return err
 	}
 
-	headersPath := filepath.Join(builder.RootDir, "headers", "include")
+	headersPath := filepath.Join(builder.GetBuildDir("headers"), "include")
 	err = execAt(glibcBuildPath, "../glibc/configure", "--prefix=/", "--libdir=/lib", "--libexecdir=/lib",
 		"--enable-add-ons", "--enable-kernel=2.6.32", "--enable-lock-elision",
 		"--enable-stackguard-randomization", "--enable-bind-now", "--disable-profile",
@@ -230,11 +232,16 @@ func (builder *Builder) BuildGlibc() error {
 		return err
 	}
 
+	builder.SetStatus("BuildGlibc", true)
+
 	return nil
 }
 
 // BuildLinux compiles the linux source.
 func (builder *Builder) BuildLinux() error {
+	if builder.GetStatus("BuildLinux") {
+		return nil
+	}
 
 	builder.BuildSetenv()
 	fmt.Println("downloading linux")
@@ -248,7 +255,7 @@ func (builder *Builder) BuildLinux() error {
 	if !exists(linuxSrc) {
 		fmt.Println("extracting linux")
 		// TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", builder.RootDir, "-xf", filename)
+		cmd := exec.Command("tar", "-C", builder.BuildDir, "-xf", filename)
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -289,6 +296,8 @@ func (builder *Builder) BuildLinux() error {
 			return err
 		}
 	}
+
+	builder.SetStatus("BuildLinux", true)
 
 	return nil
 }

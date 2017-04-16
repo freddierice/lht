@@ -64,6 +64,6 @@ func init() {
 	projectAddCmd.Flags().StringP("defconfig", "d", "", "Defconfig file for configuring the kernel")
 	projectAddCmd.Flags().String("glibc-version", "2.25", "Glibc version to use")
 	projectAddCmd.Flags().String("busybox-version", "1.26.2", "Busybox version to use")
-	projectAddCmd.Flags().Uint64P("fs-size", "s", 549755813888, "Size of the root filesystem (defaults to 512 megabytes)")
+	projectAddCmd.Flags().Uint64P("fs-size", "s", 536870912, "Size of the root filesystem (defaults to 512 megabytes)")
 	projectCmd.AddCommand(projectAddCmd)
 }
