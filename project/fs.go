@@ -1,10 +1,16 @@
 package project
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"html/template"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"gopkg.in/freddierice/go-losetup.v1"
@@ -12,7 +18,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func doUnderMount(task func(string) error, imagePath string) error {
+// Metafile holds data usefule for updating a filesystem.
+type Metafile struct {
+	HostPath   string `json:"hostPath"`
+	TargetPath string `json:"targetPath"`
+	UID        int    `json:"uid"`
+	GID        int    `json:"gid"`
+	Mode       string `json:"mode"`
+}
+
+func doUnderMount(task func(string) error, fsImagePath string) error {
 
 	mountDir, err := ioutil.TempDir("", "lht")
 	if err != nil {
@@ -20,7 +35,7 @@ func doUnderMount(task func(string) error, imagePath string) error {
 	}
 	defer os.RemoveAll(mountDir)
 
-	dev, err := losetup.Attach(imagePath, 0, false)
+	dev, err := losetup.Attach(fsImagePath, 0, false)
 	if err != nil {
 		return err
 	}
@@ -33,6 +48,93 @@ func doUnderMount(task func(string) error, imagePath string) error {
 	defer unix.Unmount(mountDir, 0)
 
 	return task(mountDir)
+}
+
+// UpdateFS will update the filesystem. If the metafile describes HostPath,
+// then UpdateFS will copy that file to the target system at targetFile. If
+// HostPath is not provided, then UpdateFS will create a directory. Paths can
+// also use golang template formats to write files to different locations based
+// on the current build. The templating engine will get run with a builder.
+func (builder *Builder) UpdateFS(r io.Reader) error {
+
+	fsImagePath := builder.GetBuildDir("rootfs.img")
+	if !exists(fsImagePath) {
+		return fmt.Errorf("filesystem does not exist")
+	}
+
+	metafiles := []Metafile{}
+	dec := json.NewDecoder(r)
+	if err := dec.Decode(&metafiles); err != nil {
+		return err
+	}
+
+	copyFiles := func(mountDir string) error {
+		for _, m := range metafiles {
+
+			perms, err := strconv.ParseInt(m.Mode, 8, 32)
+			if err != nil {
+				return fmt.Errorf("invalid perms: %v", err)
+			}
+
+			buf := bytes.NewBuffer(make([]byte, 0, 4096))
+			hostTemplate, err := template.New("hostPath").Parse(m.HostPath)
+			if err != nil {
+				return fmt.Errorf("invalid template: %v", err)
+			}
+			if err := hostTemplate.Execute(buf, builder); err != nil {
+				return fmt.Errorf("could not execute template: %v", err)
+			}
+			m.HostPath = buf.String()
+
+			buf.Reset()
+			targetTemplate, err := template.New("targetPath").Parse(m.TargetPath)
+			if err != nil {
+				return fmt.Errorf("invalid template: %v", err)
+			}
+			if err := targetTemplate.Execute(buf, builder); err != nil {
+				return fmt.Errorf("could not execute template: %v", err)
+			}
+			m.TargetPath = buf.String()
+			m.TargetPath = filepath.Join(mountDir, m.TargetPath)
+
+			// HostPath non-empty implies file, directory otherwise
+			if m.HostPath != "" {
+				hostFile, err := os.Open(m.HostPath)
+				if err != nil {
+					return fmt.Errorf("could not open %v", m.HostPath)
+				}
+				targetFile, err := os.Create(m.TargetPath)
+				if err != nil {
+					return fmt.Errorf("could not open target %v", m.TargetPath)
+				}
+				if _, err := io.Copy(targetFile, hostFile); err != nil {
+					return fmt.Errorf("could not copy file: %v", err)
+				}
+				hostFile.Close()
+				if err := targetFile.Chown(m.UID, m.GID); err != nil {
+					return fmt.Errorf("could not chown file: %v", err)
+				}
+				if err := targetFile.Chmod(os.FileMode(perms)); err != nil {
+					return fmt.Errorf("could not chmod file: %v", err)
+				}
+				targetFile.Close()
+			} else {
+				if err := os.MkdirAll(m.TargetPath, os.FileMode(perms)); err != nil {
+					return fmt.Errorf("could not create directory: %v", err)
+				}
+				if err := os.Chown(m.TargetPath, m.UID, m.GID); err != nil {
+					return fmt.Errorf("could not chown directory: %v", err)
+				}
+				if err := os.Chmod(m.TargetPath, os.FileMode(perms)); err != nil {
+					return fmt.Errorf("could not chmod directory")
+				}
+			}
+		}
+
+		return nil
+	}
+
+	return doUnderMount(copyFiles, fsImagePath)
 }
 
 // CreateRootFS creates a root filesystem.
