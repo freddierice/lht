@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/freddierice/lht.v1/project"
+	"github.com/freddierice/lht/project"
 )
 
 // updateCmd represents the update command

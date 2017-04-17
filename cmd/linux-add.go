@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/freddierice/lht.v1/project"
+	"github.com/freddierice/lht/project"
 	"github.com/spf13/cobra"
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/freddierice/lht.v1/cmd"
+	"github.com/freddierice/lht/cmd"
 )
 
 func main() {
