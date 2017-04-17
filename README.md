@@ -40,3 +40,4 @@ Optionally, a Vagrantfile is also available. To build with vagrant, go to `$GOPA
 
 ## TODO
  - Remove the need of ever needing root. Unfortunately, the only clean way to create a filesystem is to mount a raw file using loopback devices. Unfortunately this needs either root, or the capabililty `CAP_SYS_ADMIN`, which is essentially root.
+ - Document `lht fs update`
