@@ -3,7 +3,6 @@
 
 Vagrant.configure("2") do |config|
   config.vm.box = "ubuntu/xenial64"
-  config.vm.synced_folder "lht-vagrant", "/opt/lht"
   config.vm.provider "virtualbox" do |vb|
     vb.gui = false
   end
