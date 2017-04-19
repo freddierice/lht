@@ -68,6 +68,9 @@ func copyAllGit(src, dest string) error {
 		if filepath.Base(path) == ".git" {
 			return nil
 		}
+		if info == nil {
+			return nil
+		}
 
 		newDest := filepath.Join(dest, string(path[srcLen:]))
 		if info.IsDir() {
