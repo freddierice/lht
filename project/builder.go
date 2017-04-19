@@ -254,9 +254,7 @@ func (builder *Builder) BuildLinux() error {
 	linuxSrcOld := builder.GetBuildDir("linux-" + builder.LinuxBuild.LinuxVersion)
 	if !exists(linuxSrc) {
 		fmt.Println("extracting linux")
-		// TODO: replace with in-code solution
-		cmd := exec.Command("tar", "-C", builder.BuildDir, "-xf", filename)
-		if err := cmd.Run(); err != nil {
+		if err := copyAllGit(linuxSrcOld, filename); err != nil {
 			return err
 		}
 		if err := os.Rename(linuxSrcOld, linuxSrc); err != nil {
