@@ -36,6 +36,8 @@ func execAt(dir, cmdStr string, args ...string) error {
 	}
 
 	cmd := exec.Command(cmdStr, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		out, err2 := cmd.CombinedOutput()
 		fmt.Printf("error executing %v at %v.\n", cmdStr, dir)
