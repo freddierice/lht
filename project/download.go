@@ -43,7 +43,7 @@ func (builder *Builder) DownloadLinux() (string, error) {
 			return "", err
 		}
 	}
-	linuxTag := fmt.Sprintf("v", builder.LinuxBuild.LinuxVersion)
+	linuxTag := fmt.Sprintf("v%v", builder.LinuxBuild.LinuxVersion)
 
 	wd, err := os.Getwd()
 	if err != nil {
