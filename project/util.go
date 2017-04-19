@@ -64,11 +64,12 @@ func copyAllGit(src, dest string) error {
 	}
 	srcLen := len(src)
 
+	if !exists(dest) {
+		os.MkdirAll(dest, 0755)
+	}
+
 	copyAllWalkFunc := func(path string, info os.FileInfo, err error) error {
 		if filepath.Base(path) == ".git" {
-			return nil
-		}
-		if info == nil {
 			return nil
 		}
 
