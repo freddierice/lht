@@ -67,15 +67,27 @@ func copyAllGit(src, dest string) error {
 	if !exists(dest) {
 		os.MkdirAll(dest, 0755)
 	}
+	if !exists(src) {
+		return fmt.Errorf("src does not exist")
+	}
 
 	copyAllWalkFunc := func(path string, info os.FileInfo, err error) error {
 		if filepath.Base(path) == ".git" {
-			return nil
+			return filepath.SkipDir
 		}
 
 		newDest := filepath.Join(dest, string(path[srcLen:]))
 		if info.IsDir() {
 			return os.MkdirAll(newDest, info.Mode())
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			dest, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+
+			return os.Symlink(dest, newDest)
 		}
 
 		destFile, err := os.OpenFile(newDest, os.O_RDWR|os.O_CREATE, info.Mode())
@@ -113,6 +125,15 @@ func copyAll(src, dest string) error {
 		newDest := filepath.Join(dest, string(path[srcLen:]))
 		if info.IsDir() {
 			return os.MkdirAll(newDest, info.Mode())
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			dest, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+
+			return os.Symlink(dest, newDest)
 		}
 
 		destFile, err := os.OpenFile(newDest, os.O_RDWR|os.O_CREATE, info.Mode())
