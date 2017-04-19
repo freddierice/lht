@@ -7,10 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 )
-
-var majorRegex = regexp.MustCompile("^[0-9]*")
 
 // DownloadVulnKo downloads the vuln-ko project to the download directory and
 // returns the filepath to the git repository.
@@ -38,11 +35,30 @@ func (builder *Builder) DownloadGlibc() (string, error) {
 
 // DownloadLinux downloads a version of linux, and returns the filepath.
 func (builder *Builder) DownloadLinux() (string, error) {
-	versionMajor := majorRegex.FindString(builder.LinuxBuild.LinuxVersion)
 
-	linuxFilename := fmt.Sprintf("linux-%v.tar.xz", builder.LinuxBuild.LinuxVersion)
-	linuxURL := fmt.Sprintf("https://cdn.kernel.org/pub/linux/kernel/v%v.x/linux-%v.tar.xz", versionMajor, builder.LinuxBuild.LinuxVersion)
-	return download(linuxFilename, builder.DownloadDir, linuxURL)
+	linuxDir := filepath.Join(builder.DownloadDir, "linux-stable")
+	if !exists(linuxDir) {
+		cmd := exec.Command("git", "clone", "git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git", linuxDir)
+		if err := cmd.Run(); err != nil {
+			return "", err
+		}
+	}
+	linuxTag := fmt.Sprintf("v", builder.LinuxBuild.LinuxVersion)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "", nil
+	}
+
+	os.Chdir(linuxDir)
+	cmd := exec.Command("git", "checkout", linuxTag)
+	if err := cmd.Run(); err != nil {
+		return "", err
+	}
+
+	os.Chdir(wd)
+
+	return linuxDir, nil
 }
 
 // DownloadBusyBox downloads BusyBox with version and returns its filepath.
