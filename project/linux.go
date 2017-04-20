@@ -4,5 +4,6 @@ package project
 type LinuxBuild struct {
 	Name         string          `json:"name"`
 	LinuxVersion string          `json:"linuxVersion"`
+	Tag          string          `json:"tag"`
 	Status       map[string]bool `json:"status"`
 }

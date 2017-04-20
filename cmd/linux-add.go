@@ -5,23 +5,24 @@ import (
 	"os"
 	"path/filepath"
 
-	"gopkg.in/freddierice/lht.v1/project"
 	"github.com/spf13/cobra"
+	"gopkg.in/freddierice/lht.v1/project"
 )
 
 // addCmd represents the add command
 var linuxAddCmd = &cobra.Command{
-	Use:   "add <project name> <linux version> [flags]",
+	Use:   "add <project name> <linux version> <linux tag> [flags]",
 	Short: "Add a version of linux to a project",
 	Long:  `Adds a version of linux to compile`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 2 {
+		if len(args) != 3 {
 			cmd.Usage()
 			os.Exit(1)
 		}
 
 		projectName := args[0]
 		buildVersion := args[1]
+		tag := args[2]
 
 		buildName, _ := cmd.Flags().GetString("name")
 		if buildName == "" {
@@ -43,6 +44,7 @@ var linuxAddCmd = &cobra.Command{
 		proj.Builds[buildName] = project.LinuxBuild{
 			Name:         buildName,
 			LinuxVersion: buildVersion,
+			Tag:          tag,
 		}
 
 		if err := os.MkdirAll(filepath.Join(proj.Path(), buildName), 0755); err != nil {
